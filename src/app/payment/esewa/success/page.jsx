@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { verifyEsewaPayment } from "@/features/booking/api";
+import { useAuthStore } from "@/store/authStore";
 
 function EsewaSuccessContent() {
   const searchParams = useSearchParams();
@@ -20,15 +21,21 @@ function EsewaSuccessContent() {
       return;
     }
 
-    verifyEsewaPayment(data)
-      .then((res) => setState({ status: "success", booking: res?.data, message: "" }))
-      .catch((err) =>
+    const runVerification = async () => {
+      try {
+        await useAuthStore.getState().hydrate();
+        const res = await verifyEsewaPayment(data);
+        setState({ status: "success", booking: res?.data, message: "" });
+      } catch (err) {
         setState({
           status: "error",
           booking: null,
           message: err?.response?.data?.message || "Payment verification failed.",
-        })
-      );
+        });
+      }
+    };
+
+    runVerification();
   }, [searchParams]);
 
   return (
