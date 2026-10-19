@@ -1,21 +1,21 @@
 import axios from "axios";
+import { useAuthStore } from "@/store/authStore";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
-  withCredentials: true, 
+  withCredentials: true, // Sends the HttpOnly refresh-token cookie on every request
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Request interceptor — access token attach
+// Request interceptor — attach access token from memory (Zustand), NOT localStorage
 api.interceptors.request.use(
   (config) => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("hn_access_token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+    // getState() is safe outside React components — reads live Zustand store
+    const token = useAuthStore.getState().accessToken;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -63,12 +63,14 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        // Refresh cookie is sent automatically (withCredentials:true)
         const { data } = await api.post("/auth/refresh");
         const newToken = data?.data?.accessToken;
+        const newUser = data?.data?.user;
 
         if (newToken) {
-          localStorage.setItem("hn_access_token", newToken);
-          api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+          // Store new token in memory and update user profile in localStorage
+          useAuthStore.getState().setAuth(newUser, newToken);
           processQueue(null, newToken);
 
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
@@ -78,8 +80,7 @@ api.interceptors.response.use(
         }
       } catch (refreshError) {
         processQueue(refreshError, null);
-        localStorage.removeItem("hn_access_token");
-        localStorage.removeItem("hn_user");
+        useAuthStore.getState().logout();
         if (typeof window !== "undefined") {
           const protectedPaths = ["/dashboard", "/payment"];
           const isProtected = protectedPaths.some((p) =>

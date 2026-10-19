@@ -11,16 +11,14 @@ export default function DashboardLayout({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
-    useAuthStore.getState().hydrate();
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("hn_access_token") : null;
-    const isAuthed = useAuthStore.getState().isAuthenticated || Boolean(token);
-
-    if (!isAuthed) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
-    } else {
-      setChecking(false);
-    }
+    useAuthStore.getState().hydrate().then(() => {
+      const isAuthed = useAuthStore.getState().isAuthenticated;
+      if (!isAuthed) {
+        router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+      } else {
+        setChecking(false);
+      }
+    });
   }, [isAuthenticated, pathname, router]);
 
   if (checking) {

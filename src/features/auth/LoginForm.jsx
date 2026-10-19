@@ -17,13 +17,12 @@ export default function LoginForm() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
-    useAuthStore.getState().hydrate();
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("hn_access_token") : null;
-    if (useAuthStore.getState().isAuthenticated || Boolean(token)) {
-      const redirect = searchParams?.get("redirect");
-      router.replace(redirect && redirect.startsWith("/") ? redirect : "/");
-    }
+    useAuthStore.getState().hydrate().then(() => {
+      if (useAuthStore.getState().isAuthenticated) {
+        const redirect = searchParams?.get("redirect");
+        router.replace(redirect && redirect.startsWith("/") ? redirect : "/");
+      }
+    });
   }, [isAuthenticated, router, searchParams]);
 
   const {

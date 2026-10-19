@@ -1,13 +1,13 @@
 import { create } from "zustand";
+import api from "@/lib/axios";
 
 export const useAuthStore = create((set, get) => ({
   user: null,
   accessToken: null,
   isAuthenticated: false,
-
+  isHydrating: false,
   setAuth: (user, accessToken) => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("hn_access_token", accessToken);
       localStorage.setItem("hn_user", JSON.stringify(user));
     }
     set({ user, accessToken, isAuthenticated: true });
@@ -15,27 +15,43 @@ export const useAuthStore = create((set, get) => ({
 
   logout: () => {
     if (typeof window !== "undefined") {
-      localStorage.removeItem("hn_access_token");
       localStorage.removeItem("hn_user");
     }
     set({ user: null, accessToken: null, isAuthenticated: false });
   },
 
-  hydrate: () => {
-    if (typeof window === "undefined") return;
+  hydrate: async () => {
+    if (get().isHydrating || get().isAuthenticated) return;
 
-    const token = localStorage.getItem("hn_access_token");
-    const userStr = localStorage.getItem("hn_user");
+    set({ isHydrating: true });
 
-    if (token && userStr) {
+    const userStr =
+      typeof window !== "undefined" ? localStorage.getItem("hn_user") : null;
+    if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        set({ user, accessToken: token, isAuthenticated: true });
-      } catch (err) {
-        console.error("Hydrate failed:", err);
-        localStorage.removeItem("hn_access_token");
+        set({ user });
+      } catch {
         localStorage.removeItem("hn_user");
       }
+    }
+
+    try {
+      const res = await api.post("/auth/refresh");
+      const { user, accessToken } = res.data?.data || {};
+      if (accessToken && user) {
+        localStorage.setItem("hn_user", JSON.stringify(user));
+        set({ user, accessToken, isAuthenticated: true });
+      } else {
+        throw new Error("No token in refresh response");
+      }
+    } catch {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("hn_user");
+      }
+      set({ user: null, accessToken: null, isAuthenticated: false });
+    } finally {
+      set({ isHydrating: false });
     }
   },
 }));

@@ -24,12 +24,11 @@ export default function ForgotPasswordForm() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
-    useAuthStore.getState().hydrate();
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("hn_access_token") : null;
-    if (useAuthStore.getState().isAuthenticated || Boolean(token)) {
-      router.replace("/");
-    }
+    useAuthStore.getState().hydrate().then(() => {
+      if (useAuthStore.getState().isAuthenticated) {
+        router.replace("/");
+      }
+    });
   }, [isAuthenticated, router]);
 
   const handleSendOtp = (e) => {
