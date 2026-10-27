@@ -22,21 +22,22 @@ The traveler-facing storefront of **HomeStay Nepal**. Browse curated homestays a
 - **eSewa payment** — secure checkout with success and failure handling
 - **AI chat guide** — floating widget answering homestay and village questions
 
-### Authenticated
+### Authenticated & Security
 
-- **Register / Login** — traveler accounts with hashed passwords
-- **Password reset** — OTP-based recovery flow
-- **Booking management** — create, view, and cancel bookings
-- **Reviews** — rate and review stays after booking
-- **Notifications** — real-time bell for booking and payment updates
-- **Profile dashboard** — account details and booking history
+- **Register / Login** — traveler accounts with bcrypt password hashing & show/hide eye toggle
+- **Password reset** — 6-digit OTP-based recovery email flow via Brevo
+- **Booking management** — create, view, auto-expiry cancellation, and manual cancellation
+- **eSewa payment** — automated hidden form submission to eSewa ePay v2 sandbox & callback verification
+- **Reviews** — rate and review stays after booking confirmation
+- **Notifications** — in-app notifications bell for booking, payment, and approval events
+- **Profile dashboard** — account details, password change, and booking timeline
 
 ### Platform
 
-- **JWT auth** — access token in memory, refresh token in signed cookies
+- **JWT auth** — access token kept safely in memory, refresh token in httpOnly signed cookies
 - **Auto token refresh** — silent retry on `401` with request queueing
 - **Optimistic caching** — TanStack Query for all server state
-- **Responsive** — mobile-first Tailwind layout
+- **Responsive design** — mobile-first warm Nepali cultural aesthetic using Tailwind CSS
 
 ---
 
@@ -155,7 +156,7 @@ src/
 
 ### Auth flow
 
-Access tokens live in `localStorage`, refresh tokens in an httpOnly cookie. On `401`, `lib/axios.js` calls `/auth/refresh`, stores the new token, and replays the original request. Concurrent `401`s queue behind a single in-flight refresh so you never fire multiple refresh calls.
+Access tokens live in client memory (Zustand state), while refresh tokens are stored securely in an `httpOnly` signed cookie. On `401`, `lib/axios.js` automatically calls `/auth/refresh`, updates the token in memory, and seamlessly replays the original request. Concurrent `401`s queue behind a single in-flight refresh request to prevent duplicate calls.
 
 ### Feature-first organization
 
@@ -227,7 +228,3 @@ Contributions are welcome! Please open an issue or submit a pull request with a 
 ## 📄 License
 
 This project is licensed under the MIT license.
-
----
-
-Made with ❤️ by Bikram Luhar
